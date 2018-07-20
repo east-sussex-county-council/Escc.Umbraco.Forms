@@ -1,0 +1,22 @@
+@model Umbraco.Forms.Mvc.Models.FieldViewModel
+@using Umbraco.Forms.Mvc
+@{
+    var className = Html.GetFormFieldClass(Model.FieldTypeName).ToHtmlString();
+    if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+    {
+        className += " describedby-tip";
+    }
+}
+<select class="@className"  name="@Model.Name" id="@Model.Id"
+@{if(Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false){<text>aria-describedby="@Model.Id-privacy"</text>}}
+@if (Model.Mandatory){<text> data-val="true" data-val-required="@Model.RequiredErrorMessage"</text>}
+>
+    <option value=""></option>
+    <option value="Female" @if (Model.ContainsValue("Female")) { <text> selected="selected" </text> }>Female</option>
+    <option value="Male" @if (Model.ContainsValue("Male")) { <text> selected="selected" </text> }>Male</option>
+    <option value="Unspecified" @if (Model.ContainsValue("Unspecified")) {<text>selected="selected"</text>}>Unspecified</option>
+</select>
+@{if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+{
+    <p id="@Model.Id-privacy">@Model.AdditionalSettings["PrivacyNotice"]</p>
+}}

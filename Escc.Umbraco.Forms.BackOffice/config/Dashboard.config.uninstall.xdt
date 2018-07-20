@@ -1,0 +1,12 @@
+﻿<?xml version="1.0"?>
+
+<dashBoard xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <section alias="StartupFormsDashboardSection" xdt:Locator="Match(alias)">
+    <tab caption="Dashboard" xdt:Locator="Match(caption)" xdt:Transform="Remove" />
+    <tab caption="Dashboard" xdt:Transform="Insert">
+      <control>/app_plugins/umbracoforms/backoffice/dashboards/licensing.html</control>
+      <control>/app_plugins/umbracoforms/backoffice/dashboards/yourforms.html</control>
+      <control>/app_plugins/umbracoforms/backoffice/dashboards/activity.html</control>
+    </tab>
+  </section>
+</dashBoard>

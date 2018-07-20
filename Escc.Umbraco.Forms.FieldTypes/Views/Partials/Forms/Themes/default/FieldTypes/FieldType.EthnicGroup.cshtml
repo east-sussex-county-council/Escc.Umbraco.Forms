@@ -1,0 +1,95 @@
+@model Umbraco.Forms.Mvc.Models.FieldViewModel
+@using Umbraco.Forms.Mvc
+@{
+    var className = Html.GetFormFieldClass(Model.FieldTypeName).ToHtmlString();
+    if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+    {
+        className += " describedby-tip";
+    }
+
+    // If there's a second value, it's the 'other' field
+    var otherValue = String.Empty;
+    var i = 0;
+    foreach (string value in Model.Values)
+    {
+        if (i == 1) { otherValue = value; }
+        i++;
+    }
+}
+<select class="@className"  name="@Model.Name" id="@Model.Id"
+@{if(Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false){<text>aria-describedby="@Model.Id-privacy"</text>}}
+@if (Model.Mandatory){<text> data-val="true" data-val-required="@Model.RequiredErrorMessage"</text>}
+>
+    <option value=""></option>
+    <optgroup label="White">
+        <option value="British" @if (Model.ContainsValue("British"))
+        {<text>selected="selected"</text>}>British</option>
+        <option value="Irish" @if (Model.ContainsValue("Irish"))
+        {<text>selected="selected"</text>}>Irish</option>
+        <option value="Gypsy/Roma" @if (Model.ContainsValue("Gypsy/Roma"))
+        {<text>selected="selected"</text>}>Gypsy/Roma</option>
+        <option value="Irish Traveller" @if (Model.ContainsValue("Irish Traveller"))
+        {<text>selected="selected"</text>}>Irish Traveller</option>
+        <option value="Any other white background" @if (Model.ContainsValue("Any other white background"))
+        {<text>selected="selected"</text>}>Any other white background</option>
+    </optgroup>
+    <optgroup label="Mixed">
+        <option value="White and Black Caribbean" @if (Model.ContainsValue("White and Black Caribbean"))
+        {<text>selected="selected"</text>}>White and Black Caribbean</option>
+        <option value="White and Black African" @if (Model.ContainsValue("White and Black African"))
+        {<text>selected="selected"</text>}>White and Black African</option>
+        <option value="White and Asian" @if (Model.ContainsValue("White and Asian"))
+        {<text>selected="selected"</text>}>White and Asian</option>
+        <option value="Any other mixed background" @if (Model.ContainsValue("Any other mixed background"))
+        {<text>selected="selected"</text>}>Any other mixed background</option>
+    </optgroup>
+    <optgroup label="Black or Black British">
+        <option value="Caribbean" @if (Model.ContainsValue("Caribbean"))
+        {<text>selected="selected"</text>}>Caribbean</option>
+        <option value="African" @if (Model.ContainsValue("African"))
+        {<text>selected="selected"</text>}>African</option>
+        <option value="Any other black background" @if (Model.ContainsValue("Any other black background"))
+        {<text>selected="selected"</text>}>Any other black background</option>
+    </optgroup>
+    <optgroup label="Asian or Asian British">
+        <option value="Indian" @if (Model.ContainsValue("Indian"))
+        {<text>selected="selected"</text>}>Indian</option>
+        <option value="Pakistani" @if (Model.ContainsValue("Pakistani"))
+        {<text>selected="selected"</text>}>Pakistani</option>
+        <option value="Bangladeshi" @if (Model.ContainsValue("Bangladeshi"))
+        {<text>selected="selected"</text>}>Bangladeshi</option>
+        <option value="Any other Asian background" @if (Model.ContainsValue("Any other Asian background"))
+        {<text>selected="selected"</text>}>Any other Asian background</option>
+    </optgroup>
+    <optgroup label="Chinese">
+        <option value="Chinese" @if (Model.ContainsValue("Chinese"))
+        {<text>selected="selected"</text>}>Chinese</option>
+    </optgroup>
+    <optgroup label="Arab">
+        <option value="Arab" @if (Model.ContainsValue("Arab"))
+        {<text>selected="selected"</text>}>Arab</option>
+    </optgroup>
+    <optgroup label="Other ethnic group">
+        <option value="Other ethnic group" @if (Model.ContainsValue("Other ethnic group"))
+        {<text>selected="selected"</text>}>Other ethnic group</option>
+    </optgroup>
+</select>
+
+<div class="formPart umbraco-forms-field ethnicgroup alternating condition-not-matched">
+    <label for="@Model.Id-other" class="umbraco-forms-label">
+        Please describe your ethnic origin
+    </label>
+    <div class="umbraco-forms-field-wrapper">
+        <input type="text"
+               name="@Model.Name"
+               id="@Model.Id-other"
+               class="@className text"
+               value="@otherValue"
+               maxlength="50" />
+    @{if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+    {
+        <p id="@Model.Id-privacy">@Model.AdditionalSettings["PrivacyNotice"]</p>
+    }}
+
+    </div>
+</div>

@@ -1,0 +1,27 @@
+@model Umbraco.Forms.Mvc.Models.FieldViewModel
+@using Umbraco.Forms.Mvc
+@{
+    var className = Html.GetFormFieldClass(Model.FieldTypeName) + " text";
+    if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+    {
+        className += " describedby-tip"; 
+    }
+}
+<input type="tel" 
+       name="@Model.Name" 
+       id="@Model.Id" 
+       class="@className" 
+       value="@Model.ValueAsHtmlString" 
+       maxlength="15"
+       @{if(Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false){<text>aria-describedby="@Model.Id-privacy"</text>}}
+       @{if(string.IsNullOrEmpty(Model.PlaceholderText) == false){<text>placeholder="@Model.PlaceholderText"</text>}}
+       data-val="true"
+       @{if (Model.Mandatory) {<text> data-val-required="@Model.RequiredErrorMessage"</text>}}
+       @{if (Model.Validate) {<text> data-val-regex="@Model.InvalidErrorMessage" data-regex="@Html.Raw(Model.Regex)"</text>}}
+/>
+@{if (Model.AdditionalSettings.ContainsKey("PrivacyNotice") && string.IsNullOrEmpty(Model.AdditionalSettings["PrivacyNotice"]) == false)
+{
+    <p id="@Model.Id-privacy">@Model.AdditionalSettings["PrivacyNotice"]</p>
+}}
+
+

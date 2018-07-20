@@ -1,0 +1,26 @@
+﻿@model Escc.Umbraco.Forms.Security.FormSecurity
+@{ 
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="/umbraco/assets/css/umbraco.css" type="text/css" rel="stylesheet" />
+    <title>Form permissions</title>
+</head>
+<body class="umb-dialog">
+    <div class="umb-dialog-body no-footer">
+        <div class="umb-pane">
+            <div class="control-group umb-control-group">
+                <p>The following users have permission to view the entries for '@Model.FormName'.</p>
+                <ul>
+                    @foreach (var user in Model.Users)
+                    {
+                        <li><a href="/@GlobalSettings.UmbracoMvcArea/#/users/formsecurity/edit/@user.UserId" target="_top">@user.UserDisplayName</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

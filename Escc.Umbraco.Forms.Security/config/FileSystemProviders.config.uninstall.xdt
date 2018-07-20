@@ -1,0 +1,10 @@
+﻿<?xml version="1.0"?>
+
+<FileSystemProviders xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <Provider alias="media" type="Escc.Umbraco.Forms.Security.PhysicalFileSystemWithSecureFormsUploads, Escc.Umbraco.Forms.Security" xdt:Locator="Match(alias,type)" xdt:Transform="Remove" />
+  <Provider alias="media" type="Umbraco.Core.IO.PhysicalFileSystem, Umbraco.Core" xdt:Transform="Insert">
+    <Parameters>
+      <add key="virtualRoot" value="~/media/" />
+    </Parameters>
+  </Provider>
+</FileSystemProviders>

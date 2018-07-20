@@ -1,0 +1,9 @@
+﻿{
+	css: [
+		'~/App_Plugins/EsccUmbracoFormsBackOffice/BackOffice/FormEntries/umbraco-forms-entries.css'
+		],
+	javascript: [
+	    '~/App_Plugins/EsccUmbracoFormsBackOffice/BackOffice/FormEntries/controller.js',
+	    '~/App_Plugins/EsccUmbracoFormsBackOffice/allow-new-lines-in-question-help-text.js'
+		]
+}	

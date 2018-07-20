@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Escc_Umbraco_Forms_Security_App_Plugins Include="$(MSBuildProjectDirectory)\..\packages\Escc.Umbraco.Forms.Security.1.0.0\Content\App_Plugins\**\*.*"/>
+    <Escc_Umbraco_Forms_Security_Views Include="$(MSBuildProjectDirectory)\..\packages\Escc.Umbraco.Forms.Security.1.0.0\Content\Views\**\*.*"/>
+  </ItemGroup>
+
+  <Target Name="Escc_Umbraco_Forms_Security_CopyFiles" BeforeTargets="PrepareForBuild">
+    <Message Text="Copying Escc.Umbraco.Forms.Security files to project" />
+    <Copy
+        SourceFiles="@(Escc_Umbraco_Forms_Security_App_Plugins)"
+        DestinationFiles="@(Escc_Umbraco_Forms_Security_App_Plugins->'.\App_Plugins\%(RecursiveDir)%(Filename)%(Extension)')"
+        />
+    <Copy
+        SourceFiles="@(Escc_Umbraco_Forms_Security_Views)"
+        DestinationFiles="@(Escc_Umbraco_Forms_Security_Views->'.\Views\%(RecursiveDir)%(Filename)%(Extension)')"
+        />
+  </Target>
+</Project>

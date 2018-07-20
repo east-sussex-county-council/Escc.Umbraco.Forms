@@ -1,0 +1,808 @@
+﻿using Escc.ActiveDirectory;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using Umbraco.Core;
+using Umbraco.Core.IO;
+using Umbraco.Core.Logging;
+
+namespace Escc.Umbraco.Forms.Security
+{
+    /// <summary>
+    /// A copy of the core Umbraco code for <see cref="PhysicalFileSystem"/>, with added checks for Umbraco Forms uploads which routes them to a
+    /// separate location. Since that location should be private, supports accessing that location using credentials specified in the file system configuration.
+    /// </summary>
+    /// <remarks>Inheriting from <see cref="PhysicalFileSystem"/> didn't work unfortunately.</remarks>
+    /// <seealso cref="Umbraco.Core.IO.IFileSystem2" />
+    public class PhysicalFileSystemWithSecureFormsUploads : IFileSystem2
+    {
+        // the rooted, filesystem path, using directory separator chars, NOT ending with a separator
+        // eg "c:" or "c:\path\to\site" or "\\server\path"
+        private readonly string _rootPath;
+
+        // _rootPath, but with separators replaced by forward-slashes
+        // eg "c:" or "c:/path/to/site" or "//server/path"
+        // (is used in GetRelativePath)
+        private readonly string _rootPathFwd;
+
+        // the relative url, using url separator chars, NOT ending with a separator
+        // eg "" or "/Views" or "/Media" or "/<vpath>/Media" in case of a virtual path
+        private readonly string _rootUrl;
+
+        // The root directory calculated by code from Umbraco's IOHelper which is marked internal
+        private string _rootDir;
+
+        // the rooted, filesystem path for Umbraco Forms uploads, using directory separator chars, NOT ending with a separator
+        // eg "c:" or "c:\path\to\site" or "\\server\path"
+        private readonly string _formUploadsRootPath;
+
+        // _rootFormUploadsPath, but with separators replaced by forward-slashes
+        // eg "c:" or "c:/path/to/site" or "//server/path"
+        // (is used in GetRelativePath)
+        private readonly string _formUploadsRootPathFwd;
+
+        // The domain of the credentials for reading and writing forms uploads
+        private readonly string _formUploadsDomain;
+
+        // The username of the credentials for reading and writing forms uploads
+        private readonly string _formUploadsUser;
+
+        // The password of the credentials for reading and writing forms uploads
+        private readonly string _formUploadsPassword;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PhysicalFileSystemWithSecureFormsUploads" /> class.
+        /// </summary>
+        /// <param name="virtualRoot">virtualRoot should be "~/path/to/root" eg "~/Views". The "~/" is mandatory.</param>
+        /// <param name="formUploadsVirtualRoot">The form uploads virtual root.</param>
+        /// <exception cref="ArgumentNullException">
+        /// virtualRoot
+        /// or
+        /// formUploadsVirtualRoot
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// The virtualRoot argument must be a virtual path and start with '~/'
+        /// or
+        /// The formUploadsVirtualRoot argument must be a virtual path and start with '~/'
+        /// </exception>
+        public PhysicalFileSystemWithSecureFormsUploads(string virtualRoot, string formUploadsVirtualRoot) 
+            : this(virtualRoot, formUploadsVirtualRoot, null, null, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PhysicalFileSystemWithSecureFormsUploads" /> class.
+        /// </summary>
+        /// <param name="virtualRoot">virtualRoot should be "~/path/to/root" eg "~/Views". The "~/" is mandatory.</param>
+        /// <param name="formUploadsVirtualRoot">The form uploads virtual root.</param>
+        /// <param name="formUploadsDomain">The domain of the credentials for reading and writing forms uploads.</param>
+        /// <param name="formUploadsUser">The username of the credentials for reading and writing forms uploads.</param>
+        /// <param name="formUploadsPassword">The password of the credentials for reading and writing forms uploads.</param>
+        /// <exception cref="ArgumentNullException">
+        /// virtualRoot
+        /// or
+        /// formUploadsVirtualRoot
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// The virtualRoot argument must be a virtual path and start with '~/'
+        /// or
+        /// The formUploadsVirtualRoot argument must be a virtual path and start with '~/'
+        /// </exception>
+        public PhysicalFileSystemWithSecureFormsUploads(string virtualRoot, string formUploadsVirtualRoot, string formUploadsDomain, string formUploadsUser, string formUploadsPassword)
+        {
+            if (virtualRoot == null) throw new ArgumentNullException("virtualRoot");
+            if (virtualRoot.StartsWith("~/") == false)
+                throw new ArgumentException("The virtualRoot argument must be a virtual path and start with '~/'");
+
+            if (formUploadsVirtualRoot == null) throw new ArgumentNullException("formUploadsVirtualRoot");
+            if (formUploadsVirtualRoot.StartsWith("~/") == false)
+                throw new ArgumentException("The formUploadsVirtualRoot argument must be a virtual path and start with '~/'");
+
+            _rootPath = EnsureDirectorySeparatorChar(IOHelper.MapPath(virtualRoot)).TrimEnd(Path.DirectorySeparatorChar);
+            _rootPathFwd = EnsureUrlSeparatorChar(_rootPath);
+            _rootUrl = EnsureUrlSeparatorChar(IOHelper.ResolveUrl(virtualRoot)).TrimEnd('/');
+
+            _formUploadsRootPath = EnsureDirectorySeparatorChar(IOHelper.MapPath(formUploadsVirtualRoot)).TrimEnd(Path.DirectorySeparatorChar);
+            _formUploadsRootPathFwd = EnsureUrlSeparatorChar(_formUploadsRootPath);
+            _formUploadsDomain = formUploadsDomain;
+            _formUploadsUser = formUploadsUser;
+            _formUploadsPassword = formUploadsPassword;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PhysicalFileSystemWithSecureFormsUploads" /> class.
+        /// </summary>
+        /// <param name="rootPath">The root path.</param>
+        /// <param name="rootUrl">The root URL.</param>
+        /// <param name="formUploadsRootPath">The root form uploads path.</param>
+        public PhysicalFileSystemWithSecureFormsUploads(string rootPath, string rootUrl, string formUploadsRootPath)
+            : this(rootPath, rootUrl, formUploadsRootPath, null, null, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PhysicalFileSystemWithSecureFormsUploads" /> class.
+        /// </summary>
+        /// <param name="rootPath">The root path.</param>
+        /// <param name="rootUrl">The root URL.</param>
+        /// <param name="formUploadsRootPath">The root form uploads path.</param>
+        /// <param name="formUploadsDomain">The domain of the credentials for reading and writing forms uploads.</param>
+        /// <param name="formUploadsUser">The username of the credentials for reading and writing forms uploads.</param>
+        /// <param name="formUploadsPassword">The password of the credentials for reading and writing forms uploads.</param>
+        public PhysicalFileSystemWithSecureFormsUploads(string rootPath, string rootUrl, string formUploadsRootPath, string formUploadsDomain, string formUploadsUser, string formUploadsPassword)
+        {
+            if (string.IsNullOrEmpty(rootPath))
+                throw new ArgumentException("The argument 'rootPath' cannot be null or empty.");
+
+            if (string.IsNullOrEmpty(rootUrl))
+                throw new ArgumentException("The argument 'rootUrl' cannot be null or empty.");
+
+            if (rootPath.StartsWith("~/"))
+                throw new ArgumentException("The rootPath argument cannot be a virtual path and cannot start with '~/'");
+
+            if (string.IsNullOrEmpty(formUploadsRootPath))
+                throw new ArgumentException("The argument 'formUploadsRootPath' cannot be null or empty.");
+
+            if (formUploadsRootPath.StartsWith("~/"))
+                throw new ArgumentException("The formUploadsRootPath argument cannot be a virtual path and cannot start with '~/'");
+
+            // rootFormUploadsPath should be... rooted, as in, it's a root path!
+            if (Path.IsPathRooted(rootPath) == false)
+            {
+                // but the test suite App.config cannot really "root" anything so we have to do it here
+                var localRoot = IOHelper_GetRootDirectorySafe();
+                rootPath = Path.Combine(localRoot, rootPath);
+            }
+
+            if (Path.IsPathRooted(formUploadsRootPath) == false)
+            {
+                // but the test suite App.config cannot really "root" anything so we have to do it here
+                var localRoot = IOHelper_GetRootDirectorySafe();
+                formUploadsRootPath = Path.Combine(localRoot, formUploadsRootPath);
+            }
+
+            _rootPath = EnsureDirectorySeparatorChar(rootPath).TrimEnd(Path.DirectorySeparatorChar);
+            _rootPathFwd = EnsureUrlSeparatorChar(_rootPath);
+            _rootUrl = EnsureUrlSeparatorChar(rootUrl).TrimEnd('/');
+
+            _formUploadsRootPath = EnsureDirectorySeparatorChar(formUploadsRootPath).TrimEnd(Path.DirectorySeparatorChar);
+            _formUploadsRootPathFwd = EnsureUrlSeparatorChar(_formUploadsRootPath);
+            _formUploadsDomain = formUploadsDomain;
+            _formUploadsUser = formUploadsUser;
+            _formUploadsPassword = formUploadsPassword;
+        }
+
+        /// <summary>
+        /// Returns the path to the root of the application, by getting the path to where the assembly where this
+        /// method is included is present, then traversing until it's past the /bin directory. Ie. this makes it work
+        /// even if the assembly is in a /bin/debug or /bin/release folder
+        /// </summary>
+        /// <remarks>Copied from <see cref="Umbraco.Core.IO.IOHelper"/> because it is internal</remarks>
+        /// <returns></returns>
+        private string IOHelper_GetRootDirectorySafe()
+        {
+            if (String.IsNullOrEmpty(_rootDir) == false)
+            {
+                return _rootDir;
+            }
+
+            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+            var uri = new Uri(codeBase);
+            var path = uri.LocalPath;
+            var baseDirectory = Path.GetDirectoryName(path);
+            if (String.IsNullOrEmpty(baseDirectory))
+                throw new Exception("No root directory could be resolved. Please ensure that your Umbraco solution is correctly configured.");
+
+            _rootDir = baseDirectory.Contains("bin")
+                           ? baseDirectory.Substring(0, baseDirectory.LastIndexOf("bin", StringComparison.OrdinalIgnoreCase) - 1)
+                           : baseDirectory;
+
+            return _rootDir;
+        }
+
+        /// <summary>
+        /// Determines whether a file path represents an Umbraco Forms upload.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>
+        ///   <c>true</c> if it is an Umbraco Forms upload; otherwise, <c>false</c>.
+        /// </returns>
+        private bool IsUmbracoFormsUpload(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            path = GetRelativePath(path);
+            return (path.StartsWith("forms\\upload\\") || path.StartsWith("forms/upload/"));
+        }
+
+
+        /// <summary>
+        /// Gets directories in a directory.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the directory.</param>
+        /// <returns>The filesystem-relative path to the directories in the directory.</returns>
+        /// <remarks>Filesystem-relative paths use forward-slashes as directory separators.</remarks>
+        public IEnumerable<string> GetDirectories(string path)
+        {
+            var fullPath = GetFullPath(path);
+
+            ImpersonatorWrapper impersonator = null;
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                if (Directory.Exists(fullPath))
+                {
+                    return Directory.EnumerateDirectories(fullPath).Select(GetRelativePath);
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogHelper.Error<PhysicalFileSystemWithSecureFormsUploads>("Not authorized to get directories", ex);
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                LogHelper.Error<PhysicalFileSystemWithSecureFormsUploads>("Directory not found", ex);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+
+            return Enumerable.Empty<string>();
+        }
+
+        /// <summary>
+        /// Deletes a directory.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the directory.</param>
+        public void DeleteDirectory(string path)
+        {
+            DeleteDirectory(path, false);
+        }
+
+        /// <summary>
+        /// Deletes a directory.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the directory.</param>
+        /// <param name="recursive">A value indicating whether to recursively delete sub-directories.</param>
+        public void DeleteDirectory(string path, bool recursive)
+        {
+            ImpersonatorWrapper impersonator = null;
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+                if (Directory.Exists(fullPath) == false)
+                {
+                    return;
+                }
+
+                WithRetry(() => Directory.Delete(fullPath, recursive));
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                LogHelper.Error<PhysicalFileSystemWithSecureFormsUploads>("Directory not found", ex);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a directory exists.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the directory.</param>
+        /// <returns>A value indicating whether a directory exists.</returns>
+        public bool DirectoryExists(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+                return Directory.Exists(fullPath);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Saves a file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the file.</param>
+        /// <param name="stream">A stream containing the file data.</param>
+        /// <remarks>Overrides the existing file, if any.</remarks>
+        public void AddFile(string path, Stream stream)
+        {
+            AddFile(path, stream, true);
+        }
+
+        /// <summary>
+        /// Saves a file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the file.</param>
+        /// <param name="stream">A stream containing the file data.</param>
+        /// <param name="overrideExisting">A value indicating whether to override the existing file, if any.</param>
+        /// <remarks>If a file exists and <paramref name="overrideExisting"/> is false, an exception is thrown.</remarks>
+        public void AddFile(string path, Stream stream, bool overrideExisting)
+        {
+            ImpersonatorWrapper impersonator = null;
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+                var exists = File.Exists(fullPath);
+                if (exists && overrideExisting == false)
+                    throw new InvalidOperationException(string.Format("A file at path '{0}' already exists", path));
+
+                var directory = Path.GetDirectoryName(fullPath);
+                if (directory == null) throw new InvalidOperationException("Could not get directory.");
+                Directory.CreateDirectory(directory); // ensure it exists
+
+                // if can seek, be safe and go back to start, else...
+                // hope that the stream hasn't been read already
+                if (stream.CanSeek)
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                }
+
+                using (var destination = (Stream)File.Create(fullPath))
+                {
+                    stream.CopyTo(destination);
+                }
+
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets files in a directory.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the directory.</param>
+        /// <returns>The filesystem-relative path to the files in the directory.</returns>
+        /// <remarks>Filesystem-relative paths use forward-slashes as directory separators.</remarks>
+        public IEnumerable<string> GetFiles(string path)
+        {
+            return GetFiles(path, "*.*");
+        }
+
+        /// <summary>
+        /// Gets files in a directory.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path of the directory.</param>
+        /// <param name="filter">A filter.</param>
+        /// <returns>The filesystem-relative path to the matching files in the directory.</returns>
+        /// <remarks>Filesystem-relative paths use forward-slashes as directory separators.</remarks>
+        public IEnumerable<string> GetFiles(string path, string filter)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            var fullPath = GetFullPath(path);
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                if (Directory.Exists(fullPath))
+                    return Directory.EnumerateFiles(fullPath, filter).Select(GetRelativePath);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogHelper.Error<PhysicalFileSystemWithSecureFormsUploads>("Not authorized to get directories", ex);
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                LogHelper.Error<PhysicalFileSystemWithSecureFormsUploads>("Directory not found", ex);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+
+            return Enumerable.Empty<string>();
+        }
+
+        /// <summary>
+        /// Opens a file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the file.</param>
+        /// <returns></returns>
+        public Stream OpenFile(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+                var fullPath = GetFullPath(path);
+                return File.OpenRead(fullPath);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        private ImpersonatorWrapper BuildImpersonationContext(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+            if (IsUmbracoFormsUpload(path) && !String.IsNullOrEmpty(_formUploadsDomain) && !String.IsNullOrEmpty(_formUploadsUser) && !String.IsNullOrEmpty(_formUploadsPassword))
+            {
+                impersonator = new ImpersonatorWrapper();
+                impersonator.ImpersonateUser(_formUploadsUser, _formUploadsDomain, _formUploadsPassword);
+            }
+
+            return impersonator;
+        }
+
+        /// <summary>
+        /// Deletes a file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the file.</param>
+        public void DeleteFile(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+                if (File.Exists(fullPath) == false)
+                    return;
+
+                WithRetry(() => File.Delete(fullPath));
+            }
+            catch (FileNotFoundException ex)
+            {
+                LogHelper.Info<PhysicalFileSystemWithSecureFormsUploads>(string.Format("DeleteFile failed with FileNotFoundException: {0}", ex.InnerException));
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a file exists.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the file.</param>
+        /// <returns>A value indicating whether the file exists.</returns>
+        public bool FileExists(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullpath = GetFullPath(path);
+                return File.Exists(fullpath);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the filesystem-relative path of a full path or of an url.
+        /// </summary>
+        /// <param name="fullPathOrUrl">The full path or url.</param>
+        /// <returns>The path, relative to this filesystem's root.</returns>
+        /// <remarks>
+        /// <para>The relative path is relative to this filesystem's root, not starting with any
+        /// directory separator. All separators are forward-slashes.</para>
+        /// </remarks>
+        public string GetRelativePath(string fullPathOrUrl)
+        {
+            // test url
+            var path = fullPathOrUrl.Replace('\\', '/'); // ensure url separator char
+
+            // if it starts with the root url, strip it and trim the starting slash to make it relative
+            // eg "/Media/1234/img.jpg" => "1234/img.jpg"
+            if (IOHelper.PathStartsWith(path, _rootUrl, '/'))
+                return path.Substring(_rootUrl.Length).TrimStart('/');
+
+            // if it starts with the root path, strip it and trim the starting slash to make it relative
+            // eg "c:/websites/test/root/Media/1234/img.jpg" => "1234/img.jpg"
+            if (IOHelper.PathStartsWith(path, _rootPathFwd, '/'))
+                return path.Substring(_rootPathFwd.Length).TrimStart('/');
+
+            // unchanged - what else?
+            return path;
+        }
+
+        /// <summary>
+        /// Gets the full path.
+        /// </summary>
+        /// <param name="path">The full or filesystem-relative path.</param>
+        /// <returns>The full path.</returns>
+        /// <remarks>
+        /// <para>On the physical filesystem, the full path is the rooted (ie non-relative), safe (ie within this
+        /// filesystem's root) path. All separators are Path.DirectorySeparatorChar.</para>
+        /// </remarks>
+        public string GetFullPath(string path)
+        {
+            // normalize
+            var opath = path;
+            path = EnsureDirectorySeparatorChar(path);
+
+            // TODO in v8 this should be cleaned up
+            // the first part should probably removed
+
+            // not sure what we are doing here - so if input starts with a (back) slash,
+            // we assume it's not a FS relative path and we try to convert it... but it
+            // really makes little sense?
+            if (path.StartsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                path = GetRelativePath(path);
+            }
+
+            var rootPath = IsUmbracoFormsUpload(path) ? _formUploadsRootPath : _rootPath;
+
+            // if not already rooted, combine with the root path
+            if (IOHelper.PathStartsWith(path, rootPath, Path.DirectorySeparatorChar) == false)
+            {
+                path = Path.Combine(rootPath, path);
+            }
+
+            // sanitize - GetFullPath will take care of any relative
+            // segments in path, eg '../../foo.tmp' - it may throw a SecurityException
+            // if the combined path reaches illegal parts of the filesystem
+            path = Path.GetFullPath(path);
+
+            // at that point, path is within legal parts of the filesystem, ie we have
+            // permissions to reach that path, but it may nevertheless be outside of
+            // our root path, due to relative segments, so better check
+            if (IOHelper.PathStartsWith(path, rootPath, Path.DirectorySeparatorChar))
+            {
+                return path;
+            }
+
+            // nothing prevents us to reach the file, security-wise, yet it is outside
+            // this filesystem's root - throw
+            throw new FileSecurityException("File '" + opath + "' is outside this filesystem's root.");
+        }
+
+        /// <summary>
+        /// Gets the url.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path.</param>
+        /// <returns>The url.</returns>
+        /// <remarks>All separators are forward-slashes.</remarks>
+        public string GetUrl(string path)
+        {
+            path = EnsureUrlSeparatorChar(path).Trim('/');
+            return _rootUrl + "/" + path;
+        }
+
+        /// <summary>
+        /// Gets the last-modified date of a directory or file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the directory or the file.</param>
+        /// <returns>The last modified date of the directory or the file.</returns>
+        public DateTimeOffset GetLastModified(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullpath = GetFullPath(path);
+                return DirectoryExists(fullpath)
+                    ? new DirectoryInfo(fullpath).LastWriteTimeUtc
+                    : new FileInfo(fullpath).LastWriteTimeUtc;
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the created date of a directory or file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the directory or the file.</param>
+        /// <returns>The created date of the directory or the file.</returns>
+        public DateTimeOffset GetCreated(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullpath = GetFullPath(path);
+                return DirectoryExists(fullpath)
+                    ? Directory.GetCreationTimeUtc(fullpath)
+                    : File.GetCreationTimeUtc(fullpath);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the size of a file.
+        /// </summary>
+        /// <param name="path">The filesystem-relative path to the file.</param>
+        /// <returns>The file of the size, in bytes.</returns>
+        /// <remarks>If the file does not exist, returns -1.</remarks>
+        public long GetSize(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+                var file = new FileInfo(fullPath);
+                return file.Exists ? file.Length : -1;
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        public bool CanAddPhysical { get { return true; } }
+
+        public void AddFile(string path, string physicalPath, bool overrideIfExists = true, bool copy = false)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+
+                var fullPath = GetFullPath(path);
+
+                if (File.Exists(fullPath))
+                {
+                    if (overrideIfExists == false)
+                        throw new InvalidOperationException(string.Format("A file at path '{0}' already exists", path));
+                    WithRetry(() => File.Delete(fullPath));
+                }
+
+                var directory = Path.GetDirectoryName(fullPath);
+                if (directory == null) throw new InvalidOperationException("Could not get directory.");
+                Directory.CreateDirectory(directory); // ensure it exists
+
+                if (copy)
+                {
+                    WithRetry(() => File.Copy(physicalPath, fullPath));
+                }
+                else
+                {
+                    WithRetry(() => File.Move(physicalPath, fullPath));
+
+                }
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        #region Helper Methods
+
+        protected virtual void EnsureDirectory(string path)
+        {
+            ImpersonatorWrapper impersonator = null;
+
+            try
+            {
+                impersonator = BuildImpersonationContext(path);
+                path = GetFullPath(path);
+                Directory.CreateDirectory(path);
+            }
+            finally
+            {
+                if (impersonator != null)
+                {
+                    impersonator.UndoUserImpersonation();
+                }
+            }
+        }
+
+        protected string EnsureTrailingSeparator(string path)
+        {
+            return path.EnsureEndsWith(Path.DirectorySeparatorChar);
+        }
+
+        protected string EnsureDirectorySeparatorChar(string path)
+        {
+            path = path.Replace('/', Path.DirectorySeparatorChar);
+            path = path.Replace('\\', Path.DirectorySeparatorChar);
+            return path;
+        }
+
+        protected string EnsureUrlSeparatorChar(string path)
+        {
+            path = path.Replace('\\', '/');
+            return path;
+        }
+
+        protected void WithRetry(Action action)
+        {
+            // 10 times 100ms is 1s
+            const int count = 10;
+            const int pausems = 100;
+
+            for (var i = 0; ; i++)
+            {
+                try
+                {
+                    action();
+                    break; // done
+                }
+                catch (IOException e)
+                {
+                    // if it's not *exactly* IOException then it could be
+                    // some inherited exception such as FileNotFoundException,
+                    // and then we don't want to retry
+                    if (e.GetType() != typeof(IOException)) throw;
+
+                    // if we have tried enough, throw, else swallow
+                    // the exception and retry after a pause
+                    if (i == count) throw;
+                }
+
+                Thread.Sleep(pausems);
+            }
+        }
+
+        #endregion
+    }
+}

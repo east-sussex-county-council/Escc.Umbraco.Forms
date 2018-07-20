@@ -1,0 +1,6 @@
+@model Umbraco.Forms.Mvc.Models.FieldViewModel
+@using Umbraco.Forms.Mvc
+@if (Model.AdditionalSettings.ContainsKey("FormattedText") && string.IsNullOrEmpty(Model.AdditionalSettings["FormattedText"]) == false)
+{
+    @Html.Raw(Umbraco.Web.Templates.TemplateUtilities.ParseInternalLinks(Model.AdditionalSettings["FormattedText"]));
+}
