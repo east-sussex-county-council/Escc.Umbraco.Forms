@@ -428,7 +428,7 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
                 var parentQueryString = window.parent.document.location.toString().substr(parentHasQueryString + 1).split('&').map(function (pair) { return pair.split("="); });
                 for (var i = 0; i < parentQueryString.length; i++) {
                     if (parentQueryString[i][0].toLowerCase() === "entry") {
-                        vm.viewEntryDetails($scope.records.schema, $scope.records.results.filter(record => record.uniqueId === parentQueryString[i][1])[0], null);
+                        vm.viewEntryDetails($scope.records.schema, $scope.records.results.filter(function (element) { return (element.uniqueId === parentQueryString[i][1]); })[0]);
                     }
                 }
             }
