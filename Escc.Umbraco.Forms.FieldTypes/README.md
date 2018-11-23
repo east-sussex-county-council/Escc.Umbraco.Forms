@@ -74,3 +74,11 @@ This works by setting up TinyMCE as a new setting type, so that a setting on a f
 ## `Gender`
 
 The `Gender` field type inserts a standardised dropdown list using the [gender options recommended in the GOV.UK Design System](https://design-system.service.gov.uk/patterns/gender-or-sex/).
+
+## `DatePicker`
+
+This update to the standard date picker field fixes two issues:
+
+* When you have already entered a date and are using the field a second time, the browser autocomplete can obscure the popup calendar. This is logged with Umbraco as [Issue #48](https://github.com/umbraco/Umbraco.Forms.Issues/issues/48).
+* SQL Server cannot handle dates before 1753, and if you enter one the form it crashes with the error `System.Data.SqlTypes.SqlTypeException SqlDateTime overflow. Must be between 1/1/1753 12:00:00 AM and 12/31/9999 11:59:59 PM.` This is logged with Umbraco as [Issue #49](https://github.com/umbraco/Umbraco.Forms.Issues/issues/49).
+
