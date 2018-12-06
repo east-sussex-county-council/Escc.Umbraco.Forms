@@ -2,6 +2,7 @@
 using Umbraco.Web.WebApi;
 using System.Web.Http;
 using Umbraco.Core.Logging;
+using System.Collections.Generic;
 
 namespace Escc.Umbraco.Forms.Security
 {
@@ -52,8 +53,28 @@ namespace Escc.Umbraco.Forms.Security
         }
 
         /// <summary>
+        /// Gets the ids of all users who might potentially have access to Umbraco Forms
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet]
+        public IEnumerable<int> ListUserIds()
+        {
+            try
+            {
+                var formsSecurity = new UmbracoFormsSecurity();
+                return formsSecurity.GetAllUserIds(Services.UserService);
+            }
+            catch (Exception exception)
+            {
+                LogHelper.Error<UmbracoFormsSecurityApiController>(exception.Message, exception);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Where a user or a form has no security settings in Umbraco Forms, add a 'deny all' record.
         /// </summary>
+        /// <param name="userId">The id of the user to update permissions for</param>
         /// <remarks>
         /// Where a user or a form has no security settings in Umbraco Forms, they are allowed access by default.
         /// This happens for new users and new forms. Since there is no event to watch for new users or new forms,
@@ -61,12 +82,13 @@ namespace Escc.Umbraco.Forms.Security
         /// permissions have already been set they are left unchanged.
         /// </remarks>
         [HttpPost]
-        public void DenyAccessToFormsByDefault()
+        public void DenyAccessToFormsByDefault(int userId)
         {
             try
             {
                 var formsSecurity = new UmbracoFormsSecurity();
-                formsSecurity.DenyAccessToFormsByDefault(Services.UserService);
+                formsSecurity.RemoveManageFormsPermissions(userId, false);
+                formsSecurity.RemoveDefaultAccessToForms(userId, false);
             }
             catch (Exception exception)
             {

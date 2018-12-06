@@ -34,4 +34,4 @@ Every form that collects personal data must have a retention schedule, and ideal
 * Add a field called 'Delete after' to a form using the 'Hidden' answer type, ensuring it has the alias `deleteAfter`.
 * Add a workflow using the 'Retention schedule: after a set date' workflow, and set the time period to keep records for.
 * When a form is submitted and the workflow runs, a date is added to the `deleteAfter` field.
-* Run a scheduled task regularly to call `https://hostname/umbraco/api/UmbracoFormsRetentionApi/ApplySetDateRetentionSchedule` using the HTTP `DELETE` method. It will look for the `deleteAfter` field on all form records, and delete any where it finds a date that has passed. 
+* Run `Escc.Umbraco.Forms.Workflows.ApplyRetentionSchedule.exe` regularly as a scheduled task. It will look for the `deleteAfter` field on all form records, and delete any where it finds a date that has passed. 

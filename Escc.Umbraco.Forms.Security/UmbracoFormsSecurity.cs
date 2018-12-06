@@ -141,8 +141,8 @@ namespace Escc.Umbraco.Forms.Security
             {
                 foreach (var user in users)
                 {
-                    RemoveManageFormsPermissions(user, true);
-                    RemoveDefaultAccessToForms(user, true);
+                    RemoveManageFormsPermissions(user.Id, true);
+                    RemoveDefaultAccessToForms(user.Id, true);
                 }
 
                 page++;
@@ -155,46 +155,45 @@ namespace Escc.Umbraco.Forms.Security
         /// </summary>
         /// <param name="userService">The user service.</param>
         /// <exception cref="ArgumentNullException">userService</exception>
-        public void DenyAccessToFormsByDefault(IUserService userService)
+        public IEnumerable<int> GetAllUserIds(IUserService userService)
         {
             if (userService == null)
             {
                 throw new ArgumentNullException(nameof(userService));
             }
 
+            var userIds = new List<int>();
+
             var page = 0;
             var total = 0;
             var users = userService.GetAll(page, 10, out total);
             while (users.Any())
             {
-                foreach (var user in users)
-                {
-                    RemoveManageFormsPermissions(user, false);
-                    RemoveDefaultAccessToForms(user, false);
-                }
+                userIds.AddRange(users.Select(user => user.Id));
 
                 page++;
                 users = userService.GetAll(page, 10, out total);
             }
-        }
 
+            return userIds;
+        }
 
         /// <summary>
         /// Each Umbraco User should have an Umbraco Forms permissions record which holds their overall permissions for Umbraco Forms.
         /// This preserves existing permissions and adds a 'deny all' permission if there is no record.
         /// </summary>
-        /// <param name="user">The user.</param>
+        /// <param name="userId">The user.</param>
         /// <param name="forEveryone">if set to <c>true</c> overwrite all existing permissions with 'deny all'.</param>
-        private void RemoveManageFormsPermissions(IUser user, bool forEveryone)
+        public void RemoveManageFormsPermissions(int userId, bool forEveryone)
         {
             using (UserSecurityStorage userSecurityStorage = new UserSecurityStorage())
             {
-                var userSecurity = userSecurityStorage.GetUserSecurity(user.Id.ToString()).FirstOrDefault();
+                var userSecurity = userSecurityStorage.GetUserSecurity(userId.ToString()).FirstOrDefault();
                 var hasSecurityAlready = (userSecurity != null);
                 if (!hasSecurityAlready)
                 {
                     userSecurity = UserSecurity.Create();
-                    userSecurity.User = user.Id.ToString();
+                    userSecurity.User = userId.ToString();
                 }
                 userSecurity.ManageForms = false;
                 userSecurity.ManageDataSources = false;
@@ -216,9 +215,9 @@ namespace Escc.Umbraco.Forms.Security
         /// Each Umbraco User should have an Umbraco Forms permissions record for each form.
         /// This preserves existing permissions and adds a 'deny' permission if there is no record.
         /// </summary>
-        /// <param name="user">The user.</param>
+        /// <param name="userId">The user.</param>
         /// <param name="forEveryone">if set to <c>true</c> overwrite all existing permissions with 'deny'.</param>
-        private void RemoveDefaultAccessToForms(IUser user, bool forEveryone)
+        public void RemoveDefaultAccessToForms(int userId, bool forEveryone)
         {
             using (FormStorage formStorage = new FormStorage())
             {
@@ -227,12 +226,12 @@ namespace Escc.Umbraco.Forms.Security
                     IEnumerable<Form> allForms = formStorage.GetAllForms();
                     foreach (Form form in allForms)
                     {
-                        var formSecurityForUser = formSecurityStorage.GetUserFormSecurity(user.Id, form.Id).FirstOrDefault();
+                        var formSecurityForUser = formSecurityStorage.GetUserFormSecurity(userId, form.Id).FirstOrDefault();
                         var hasSecurityAlready = (formSecurityForUser != null);
                         if (!hasSecurityAlready)
                         {
                             formSecurityForUser = UserFormSecurity.Create();
-                            formSecurityForUser.User = user.Id.ToString();
+                            formSecurityForUser.User = userId.ToString();
                             formSecurityForUser.Form = form.Id;
                         }
                         formSecurityForUser.HasAccess = false;

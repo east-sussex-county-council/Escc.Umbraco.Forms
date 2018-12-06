@@ -18,40 +18,49 @@ namespace Escc.Umbraco.Forms.Workflows
     public class UmbracoFormsRetentionApiController : UmbracoApiController
     {
         /// <summary>
+        /// Gets a list of all forms
+        /// </summary>
+        [HttpGet]
+        public IEnumerable<Guid> ListForms()
+        {
+            using (var formStorage = new FormStorage())
+            {
+                return formStorage.GetAllForms().Select(form => form.Id);
+            }
+        }
+
+        /// <summary>
         /// Applies the 'after a set date' retention schedule defined in <see cref="Workflows.RetentionAfterSetDateWorkflow"/>.
         /// </summary>
         [HttpDelete]
-        public void ApplySetDateRetentionSchedule()
+        public void ApplySetDateRetentionSchedule(Guid formId)
         {
             try
             {
-                LogHelper.Info<UmbracoFormsRetentionApiController>($"ApplySetDateRetentionSchedule started at {DateTime.UtcNow} (UTC).");
+                LogHelper.Info<UmbracoFormsRetentionApiController>($"ApplySetDateRetentionSchedule for form {formId} started at {DateTime.UtcNow} (UTC).");
 
-                // Loop through all fields on all records on all forms looking for the retention date,
+                // Loop through all fields on all records looking for the retention date,
                 // then compare it to the current date and delete the record if the retention date has passed
                 using (var formStorage = new FormStorage())
                 {
-                    var forms = formStorage.GetAllForms();
-                    foreach (var form in forms)
+                    var form = formStorage.GetForm(formId);
+                    using (var recordStorage = new RecordStorage())
                     {
-                        using (var recordStorage = new RecordStorage())
+                        var records = recordStorage.GetAllRecords(form);
+                        foreach (var record in records)
                         {
-                            var records = recordStorage.GetAllRecords(form);
-                            foreach (var record in records)
+                            foreach (var field in record.RecordFields)
                             {
-                                foreach (var field in record.RecordFields)
+                                if (field.Value.Alias == "deleteAfter" && field.Value.HasValue() && !String.IsNullOrEmpty(field.Value.ValuesAsString()))
                                 {
-                                    if (field.Value.Alias == "deleteAfter" && field.Value.HasValue() && !String.IsNullOrEmpty(field.Value.ValuesAsString()))
+                                    DateTime retentionDate;
+                                    if (DateTime.TryParse(field.Value.ValuesAsString(), out retentionDate))
                                     {
-                                        DateTime retentionDate;
-                                        if (DateTime.TryParse(field.Value.ValuesAsString(), out retentionDate))
+                                        if (retentionDate < DateTime.Today)
                                         {
-                                            if (retentionDate < DateTime.Today)
-                                            {
-                                                LogHelper.Info<UmbracoFormsRetentionApiController>($"Deleting record '{record.UniqueId}' for form '{form.Name}' with Id '{form.Id}' as its retention date '{field.Value.ValuesAsString()}' has passed.");
-                                                recordStorage.DeleteRecord(record, form);
-                                                break;
-                                            }
+                                            LogHelper.Info<UmbracoFormsRetentionApiController>($"Deleting record '{record.UniqueId}' for form '{form.Name}' with Id '{form.Id}' as its retention date '{field.Value.ValuesAsString()}' has passed.");
+                                            recordStorage.DeleteRecord(record, form);
+                                            break;
                                         }
                                     }
                                 }
@@ -60,7 +69,7 @@ namespace Escc.Umbraco.Forms.Workflows
                     }
                 }
 
-                LogHelper.Info<UmbracoFormsRetentionApiController>($"ApplyRetentionSchedules completed at {DateTime.UtcNow} (UTC).");
+                LogHelper.Info<UmbracoFormsRetentionApiController>($"ApplySetDateRetentionSchedule for form {formId} completed at {DateTime.UtcNow} (UTC).");
             }
             catch (Exception exception)
             {

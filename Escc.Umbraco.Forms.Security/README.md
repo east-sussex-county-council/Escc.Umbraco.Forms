@@ -2,7 +2,7 @@
 
 ## Secure forms by default
 
-Unfortunately Umbraco Forms grants access to all forms for new users, and to all users for new forms. The default permission set should be 'deny' in both cases, and `UmbracoFormsSecurityApiController` exists to create a 'deny' record wherever one is missing. Run a scheduled task frequently to call `https://hostname/umbraco/api/UmbracoFormsSecurityApi/DenyAccessToFormsByDefault` using the HTTP `POST` method. It will pick up and fix new users and new forms as they are created.
+Unfortunately Umbraco Forms grants access to all forms for new users, and to all users for new forms. The default permission set should be 'deny' in both cases, and `UmbracoFormsSecurityApiController` exists to create a 'deny' record wherever one is missing. Run `Escc.Umbraco.Forms.Security.DenyAccessToFormsByDefault.exe` frequently as a scheduled task. It will pick up and fix new users and new forms as they are created.
 
 This issue is logged with Umbraco as [CON-1022](http://issues.umbraco.org/issue/CON-1022).
 
