@@ -25,6 +25,11 @@ namespace Escc.Umbraco.Forms.Workflows.ApplyRetentionSchedule
 
             try
             {
+                if (!CheckEnvironmentPrecondition())
+                {
+                    return;
+                }
+
                 var baseUrl = ConfigurationManager.AppSettings["UmbracoBaseUrl"];
                 if (string.IsNullOrEmpty(baseUrl))
                 {
@@ -130,6 +135,22 @@ namespace Escc.Umbraco.Forms.Workflows.ApplyRetentionSchedule
                     return default(T);
                 }
             }
+        }
+
+        private static bool CheckEnvironmentPrecondition()
+        {
+            var precondition = ConfigurationManager.AppSettings["Precondition"];
+            if (!string.IsNullOrEmpty(precondition))
+            {
+                var split = ConfigurationManager.AppSettings["Precondition"].Split('=');
+                if (split.Length == 2)
+                {
+                    var result = (Environment.GetEnvironmentVariable(split[0]).Equals(split[1], StringComparison.OrdinalIgnoreCase));
+                    _log.Info("Precondition " + precondition + (result ? " OK." : " failed."));
+                    return result;
+                }
+            }
+            return true;
         }
     }
 }
