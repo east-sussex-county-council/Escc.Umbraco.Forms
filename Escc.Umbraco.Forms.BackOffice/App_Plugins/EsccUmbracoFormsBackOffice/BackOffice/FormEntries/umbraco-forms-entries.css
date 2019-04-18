@@ -1,3 +1,0 @@
-﻿/* The first data field links to the data entry, but if that field is optional and empty the link has no content to click on. 
-   Add an arrow so that there's always something to click on. http://issues.umbraco.org/issue/CON-1465 */
-.umb-table-body__link[ng-click^='vm.viewEntryDetails']:empty::before { content: '(no answer)'}

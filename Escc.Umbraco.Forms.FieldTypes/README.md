@@ -14,16 +14,16 @@ This works by setting up TinyMCE as a new setting type, so that a setting on a f
 
 ## Ethnic group
 
-`EthnicGroup` inserts a standardised dropdown list of ethnic groups, and an 'other' box which appears if any of the 'other' options are selected. To make this work you need to add code to injects JSON into the page which hooks into Umbraco Forms' own conditional logic. Add the following code to `~\Views\Partials\Forms\Themes\[your-theme]\Script.cshtml` before the line which reads `var jsCommand = ...`. 
+`EthnicGroup` inserts a standardised dropdown list of ethnic groups, and an 'other' box which appears if any of the 'other' options are selected. To make this work you need to add code to inject a condition into the page which hooks into Umbraco Forms' own conditional logic. Add the following code to `~\Views\Partials\Forms\Themes\[your-theme]\Script.cshtml` before the line which reads `var formJsObj = new ...`. 
 
 	// START: Ethnic group field
     //
     // The 'Ethnic group' field type has two fields in the HTML returned to the client, 
     // and the second is only needed if specific values are selected in the first.
     //
-    // Inject extra JSON into the conditions setup for this page of the form to cause the Umbraco Forms 
+    // Inject an extra condition for this page of the form to cause the Umbraco Forms 
     // conditional code to handle that for us, so that we can be sure it behaves consistently.
-    var ethnicConditions = new List<string>();
+
     foreach (var fieldset in Model.CurrentPage.Fieldsets)
     {
         foreach (var group in fieldset.Containers)
@@ -32,41 +32,24 @@ This works by setting up TinyMCE as a new setting type, so that a setting on a f
             {
                 if (field.FieldTypeName == "Ethnic group")
                 {
-                    ethnicConditions.Add("'" + field.Id + @"-other': {
-    'id': '00000000-0000-0000-0000-000000000000',
-    'actionType': 'Show',
-    'logicType': 'Any',
-    'rules': [
-      {
-        'id': '00000000-0000-0000-0000-000000000000',
-        'fieldsetId': '" + fieldset.Id + @"',
-        'field': '" + field.Id + @"',
-        'operator': 'Contains',
-        'value': 'other'
-      },{
-        'id': '00000000-0000-0000-0000-000000000000',
-        'fieldsetId': '" + fieldset.Id + @"',
-        'field': '" + field.Id + @"',
-        'operator': 'Contains',
-        'value': 'Other'
-      }
-    ]
-  	}");
+                    var rules = new List<Umbraco.Forms.Web.Models.ConditionRuleViewModel>();
+                    rules.Add(new Umbraco.Forms.Web.Models.ConditionRuleViewModel
+                    {
+                        Field = new Guid(field.Id),
+                        FieldsetId = new Guid(fieldset.Id),
+                        Operator = Umbraco.Forms.Core.FieldConditionRuleOperator.Contains,
+                        Value = "other"
+                    });
+                    var condition = new Umbraco.Forms.Web.Models.ConditionViewModel
+                    {
+                        ActionType = Umbraco.Forms.Core.FieldConditionActionType.Show,
+                        LogicType = Umbraco.Forms.Core.FieldConditionLogicType.All,
+                        Rules = rules
+                    };
+
+                    Model.FieldConditions.Add(new Guid("12345678-" + field.Id.Substring(9)), condition);
                 }
             }
-        }
-    }
-
-    if (ethnicConditions.Count > 0) {
-        var fieldConditionsJson = fieldConditions.ToHtmlString();
-        var ethnicConditionsJson = String.Join(",", ethnicConditions.ToArray<string>());
-        if (fieldConditionsJson == "{}")
-        {
-            fieldConditions = new HtmlString("{" + ethnicConditionsJson + "}");
-        }
-        else
-        {
-            fieldConditions = new HtmlString("{" + ethnicConditionsJson + "," + fieldConditionsJson.Substring(1));
         }
     }
     // END: Ethnic group field
@@ -74,11 +57,3 @@ This works by setting up TinyMCE as a new setting type, so that a setting on a f
 ## `Gender`
 
 The `Gender` field type inserts a standardised dropdown list using the [gender options recommended in the GOV.UK Design System](https://design-system.service.gov.uk/patterns/gender-or-sex/).
-
-## `DatePicker`
-
-This update to the standard date picker field fixes two issues:
-
-* When you have already entered a date and are using the field a second time, the browser autocomplete can obscure the popup calendar. This is logged with Umbraco as [Issue #48](https://github.com/umbraco/Umbraco.Forms.Issues/issues/48).
-* SQL Server cannot handle dates before 1753, and if you enter one the form it crashes with the error `System.Data.SqlTypes.SqlTypeException SqlDateTime overflow. Must be between 1/1/1753 12:00:00 AM and 12/31/9999 11:59:59 PM.` This is logged with Umbraco as [Issue #49](https://github.com/umbraco/Umbraco.Forms.Issues/issues/49).
-

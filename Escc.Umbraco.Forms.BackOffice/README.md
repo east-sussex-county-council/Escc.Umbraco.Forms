@@ -8,15 +8,10 @@ By default in Umbraco Forms, to grant a user access to view and download their f
 
 This is achieved by the `~\App_Plugins\EsccUmbracoFormsBackOffice` folder, which adds an extra branch in the tree for the Forms section for viewing entries without offering the ability to design a form. A client-side controller (`controller.js`) and view (`edit.html`) copied from the out-of-the-box files ensures that the built-in functionality for viewing forms is all available. These files may need to be manually replaced each time Umbraco Forms is updated, and the changes are documented in `controller.js` and `edit.html`.
 
-`RemoveOriginalEntriesViewerEventHandler` removes the link to the original entries viewer from the tree to avoid confusion,and `YourForms.html` along with a change to `Dashboard.config` changes the initial Umbraco Forms dashboard to point at the new entries viewer as well.
+`RemoveOriginalEntriesViewerEventHandler` removes the link to the original entries viewer from the tree to avoid confusion,and `YourForms.html` along with a change to `Dashboard.config` changes the initial Umbraco Forms dashboard to point at the new entries viewer as well. Unfortunately the dashboard does not display the count of form submissions for users without Manage Forms permissions, as it calls an API in closed server-side code.
 
-This issue is logged with Umbraco as [CON-1455](http://issues.umbraco.org/issue/CON-1455).
+This issue is logged with Umbraco as [Issue #3](https://github.com/umbraco/Umbraco.Forms.Issues/issues/3).
 
-## Ensuring you can always view form data
-
-If the first field on an Umbraco form is optional and not completed, there is nothing to click on to view the data. A CSS file at `~\App_Plugins\EsccUmbracoFormsBackOffice\BackOffice\FormEntries\umbraco-forms-entries.css` fixes this by adding some generated content that is always displayed and clickable. 
-
-This issue is logged with Umbraco as [CON-1465](http://issues.umbraco.org/issue/CON-1465).
 
 ## A URL to view a single form entry
 
@@ -24,7 +19,7 @@ Unfortunately Umbraco Forms doesn't support a native URL to view a single form e
 
 To add that support, `~\App_Plugins\EsccUmbracoFormsBackOffice\BackOffice\FormEntries\controller.js` has added code that looks for an `entry` parameter on the querystring and opens the view for that entry. This will only work with low form volumes as the entry to view needs to be on the first page of results when they load. 
 
-This issue is logged with Umbraco as [CON-1487](http://issues.umbraco.org/issue/CON-1487).
+This issue is logged with Umbraco as [Issue #7](https://github.com/umbraco/Umbraco.Forms.Issues/issues/7).
 
 ## Allow paragraphs in question help text 
 

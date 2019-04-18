@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Escc_Umbraco_Forms_FieldTypes_Content Include="$(MSBuildProjectDirectory)\..\packages\Escc.Umbraco.Forms.FieldTypes.1.1.1\Content\**\*.*"/>
+    <Escc_Umbraco_Forms_FieldTypes_Content Include="$(MSBuildProjectDirectory)\..\packages\Escc.Umbraco.Forms.FieldTypes.2.0.0\Content\**\*.*"/>
   </ItemGroup>
 
   <Target Name="Escc_Umbraco_Forms_FieldTypes_CopyFiles" BeforeTargets="PrepareForBuild">

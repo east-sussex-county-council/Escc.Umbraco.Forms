@@ -1,6 +1,6 @@
-﻿// Copied from umbraco-forms.js in Umbraco Forms 6.0.5 then:
-// * line 84 changed to remove the check for Manage Forms permission,
-// * line 112 changed to highlight the correct entry in the tree
+﻿// The EntriesController section of ~/App_Plugins/UmbracoForms/js/umbraco-forms.js is copied from Umbraco Forms 7.1.1 then:
+// * line 94 changed to remove the check for Manage Forms permission,
+// * line 120 call to syncTree changed to highlight the correct entry in the tree
 // * line 433 inside $scope.loadRecords, added query string parsing and a call to viewEntryDetails() to support a URL that views a specific record, so that a link can be sent by email.
 // * renamed the controller from 'EntriesController' to 'EntriesController2'.
 angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesController2", function ($scope, $routeParams, recordResource, formResource, dialogService, editorState, userService, securityResource, notificationsService, navigationService) {
@@ -29,6 +29,8 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
     vm.prevEntryDetails = prevEntryDetails;
     vm.datePickerChange = datePickerChange;
     vm.toggleRecordState = toggleRecordState;
+    vm.canEditSensitiveData = false;
+
 
     vm.keyboardShortcutsOverview = [
 
@@ -70,6 +72,9 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
     userService.getCurrentUser().then(function (response) {
         currentUserId = response.id;
         vm.userLocale = response.locale;
+
+        //Set the API controller response on the Angular ViewModel
+        vm.canEditSensitiveData = response.userGroups.indexOf("sensitiveData") !== -1;
 
         //Now we can make a call to form securityResource
         securityResource.getByUserId(currentUserId).then(function (response) {
@@ -245,7 +250,8 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
                     name: schemaItem.name,
                     value: valueItem,
                     viewName: schemaItem.view,
-                    view: '/app_plugins/umbracoforms/Backoffice/common/rendertypes/' + schemaItem.view + '.html'
+                    view: '/app_plugins/umbracoforms/Backoffice/common/rendertypes/' + schemaItem.view + '.html',
+                    containsSensitiveData: schemaItem.containsSensitiveData
                 };
 
                 var excludeItems = ["member", "state", "created", "updated"];
@@ -421,8 +427,8 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
             vm.pagination.totalPages = response.data.totalNumberOfPages;
 
             /** ESCC CHANGE STARTS **/
-            /* If there is a form entry id on the query string, view the entry. Requires the entry to be in $scope.records.results already,
-             * therefore only works properly if the form entry is in the first page of results. */
+            /* This section is added to the original code. If there is a form entry id on the query string, view the entry. Requires the entry to be in 
+             * $scope.records.results already, therefore only works properly if the form entry is in the first page of results. */
             var parentHasQueryString = window.parent.document.location.toString().indexOf('?');
             if (parentHasQueryString > -1) {
                 var parentQueryString = window.parent.document.location.toString().substr(parentHasQueryString + 1).split('&').map(function (pair) { return pair.split("="); });
@@ -572,11 +578,11 @@ angular.module("umbraco").controller("UmbracoForms.Editors.Form.EntriesControlle
             $scope.loadRecords($scope.filter, false);
 
             //Show success notification that action excuted
-            notificationsService.success("Excuted Action", "Successfully excuted action " + action.name);
+            notificationsService.success("Excuted Action", "Successfully executed action " + action.name);
 
         }, function (err) {
             //Error Function - so get an error response from API
-            notificationsService.error("Excuted Action", "Failed to excute action " + action.name + " due to error: " + err);
+            notificationsService.error("Excuted Action", "Failed to execute action " + action.name + " due to error: " + err);
         });
 
 

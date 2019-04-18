@@ -1,22 +1,20 @@
-<!-- Note: This is copied from Umbraco Forms 6.0.5 /App_Plugins/UmbracoForms/BackOffice/Form/entries.html with:
+<!-- Note: This is copied from Umbraco Forms 7.1.1 /App_Plugins/UmbracoForms/BackOffice/Form/entries.html with:
     * the check for 'Manage Forms' permissions disabled (line 12)
     * the controller renamed from EntriesController to EntriesController2
     -->
 <div ng-controller="UmbracoForms.Editors.Form.EntriesController2 as vm">
 
-    <form
-        name="contentForm"
-        novalidate
-        val-form-manager>
+    <form name="contentForm"
+          novalidate
+          val-form-manager>
 
         <umb-editor-view ng-if="loaded && (hasAccessToCurrentForm)">
 
-            <umb-editor-header
-                name="form.name + ' entries'"
-                name-locked="true"
-                hide-alias="true"
-                hide-description="true"
-                hide-icon="true">
+            <umb-editor-header name="form.name + ' entries'"
+                               name-locked="true"
+                               hide-alias="true"
+                               hide-description="true"
+                               hide-icon="true">
             </umb-editor-header>
 
             <umb-editor-container ng-if="!vm.showEntryDetails">
@@ -29,37 +27,35 @@
                         <umb-editor-sub-header-section ng-if="selectedRows.length === 0">
 
                             <!-- Search/Filter entries -->
-                            <div class="form-search -no-margin-bottom pull-right" >
+                            <div class="form-search -no-margin-bottom pull-right">
                                 <div class="inner-addon left-addon">
                                     <i class="icon icon-search"></i>
-                                    <input
-                                        class="form-control search-input"
-                                        type="text"
-                                        placeholder="Filter entries..."
-                                        ng-model="filter.filter"
-                                        ng-change="filterChanged()"
-                                        prevent-enter-submit
-                                        no-dirty-check>
+                                    <input class="form-control search-input"
+                                           type="text"
+                                           placeholder="Filter entries..."
+                                           ng-model="filter.filter"
+                                           ng-change="filterChanged()"
+                                           prevent-enter-submit
+                                           no-dirty-check>
                                 </div>
                             </div>
 
                             <!-- Date Range Filter -->
-                            <div
-                                umb-forms-date-range-picker
-                                on-change="vm.datePickerChange"
-                                user-locale="{{vm.userLocale}}"
-                                class="date-range-filter pull-left">
+                            <div umb-forms-date-range-picker
+                                 on-change="vm.datePickerChange"
+                                 user-locale="{{vm.userLocale}}"
+                                 class="date-range-filter pull-left">
                             </div>
 
                             <!-- Checkboxes for Post Moderation -->
                             <div ng-if="form.manualApproval" style="margin-top: 5px;">
                                 <label class="checkbox" ng-repeat="recordState in states">
                                     <input type="checkbox"
-                                        name="selectedrecordStates[]"
-                                        value="{{recordState}}"
-                                        ng-model="recordState.isChecked"
-                                        ng-change="vm.toggleRecordState(recordState)">
-                                        {{recordState.name}}
+                                           name="selectedrecordStates[]"
+                                           value="{{recordState}}"
+                                           ng-model="recordState.isChecked"
+                                           ng-change="vm.toggleRecordState(recordState)">
+                                    {{recordState.name}}
                                 </label>
                             </div>
 
@@ -67,10 +63,9 @@
 
 
                         <umb-editor-sub-header-section ng-if="selectedRows.length > 0">
-                            <umb-button
-                                type="button"
-                                label="Clear selection"
-                                action="clearSelection()">
+                            <umb-button type="button"
+                                        label="Clear selection"
+                                        action="clearSelection()">
                             </umb-button>
                         </umb-editor-sub-header-section>
 
@@ -86,13 +81,12 @@
                         <umb-editor-sub-header-section ng-if="selectedRows.length === 0">
 
                             <!-- Export (Opens Dialog) -->
-                             <umb-button
-                                type="button"
-                                button-style="link"
-                                label="Export"
-                                icon="icon-out"
-                                action="edit(records.schema)"
-                                ng-if="records.totalNumberOfResults > 0">
+                            <umb-button type="button"
+                                        button-style="link"
+                                        label="Export"
+                                        icon="icon-out"
+                                        action="edit(records.schema)"
+                                        ng-if="records.totalNumberOfResults > 0">
                             </umb-button>
 
                         </umb-editor-sub-header-section>
@@ -100,13 +94,12 @@
 
                         <umb-editor-sub-header-section ng-if="selectedRows.length > 0">
 
-                            <umb-button
-                                ng-repeat="action in recordSetActions"
-                                type="button"
-                                button-style="link"
-                                label="{{action.name}}"
-                                icon="{{action.icon}}"
-                                action="executeRecordSetAction(action)">
+                            <umb-button ng-repeat="action in recordSetActions"
+                                        type="button"
+                                        button-style="link"
+                                        label="{{action.name}}"
+                                        icon="{{action.icon}}"
+                                        action="executeRecordSetAction(action)">
                             </umb-button>
 
                         </umb-editor-sub-header-section>
@@ -117,14 +110,21 @@
 
                 </umb-editor-sub-header>
 
-                 <!-- If no entires exist, show this empty state -->
-                <div class="umb-forms__no-fields umb-forms-no-entries" ng-if="records.totalNumberOfResults === 0 && !filter.filter && !loading">
+                <!-- Regardless of number of entries (if storeRecordsLocally is disabled) show warning -->
+                <div class="umb-forms__no-fields umb-forms__store-records-disabled" ng-if="!loading && !form.storeRecordsLocally">
+                    <p class="umb-forms__no-fields-text">
+                        <strong>Currently submissions are not stored in the database</strong>
+                    </p>
+                    <p class="-faded">To enable this, go to form settings and activate the "Store Records" feature</p>
+                </div>
+
+                <!-- If no entires exist, show this empty state -->
+                <div class="umb-forms__no-fields umb-forms-no-entries" ng-if="records.totalNumberOfResults === 0 && !filter.filter && !loading && form.storeRecordsLocally">
                     <p class="umb-forms__no-fields-text">
                         <strong>No submissions added yet in this date range</strong>
                     </p>
                     <p class="-faded">We couldn't find any submissions, are you sure you published the form? Or try expanding the date range</p>
                 </div>
-
 
                 <!-- If no entries matches search, show this empty state -->
                 <div class="umb-forms__no-fields umb-forms-no-entries" ng-if="records.totalNumberOfResults === 0 && filter.filter && !loading">
@@ -141,17 +141,14 @@
                     <div class="umb-table-head">
                         <div class="umb-table-row">
                             <div class="umb-table-cell">
-                                <input
-                                    type="checkbox"
-                                    ng-click="toggleAll(vm.allIsChecked)"
-                                    ng-model="vm.allIsChecked" />
+                                <input type="checkbox"
+                                       ng-click="toggleAll(vm.allIsChecked)"
+                                       ng-model="vm.allIsChecked" />
                             </div>
-                            <div
-                                class="umb-table-cell"
-
-                                ng-repeat="field in records.schema track by $index"
-                                ng-class="{'umb-table__name': $index === 0}"
-                                ng-show="records.showSchemaArray[$index]">
+                            <div class="umb-table-cell"
+                                 ng-repeat="field in records.schema track by $index"
+                                 ng-class="{'umb-table__name': $index === 0}"
+                                 ng-show="records.showSchemaArray[$index]">
                                 {{field.name}}
                             </div>
                         </div>
@@ -165,12 +162,10 @@
                                 <i class="umb-table-body__icon umb-table-body__checkicon icon-check"></i>
                             </div>
 
-                            <div
-                                class="umb-table-cell"
-
-                                ng-repeat="field in row.fields track by $index"
-                                ng-class="{'umb-table__name': $index === 0}"
-                                ng-show="row.showRecordsArray[$index]">
+                            <div class="umb-table-cell"
+                                 ng-repeat="field in row.fields track by $index"
+                                 ng-class="{'umb-table__name': $index === 0}"
+                                 ng-show="row.showRecordsArray[$index]">
 
                                 <div ng-switch on="records.schema[$index].view">
 
@@ -181,7 +176,7 @@
                                     </div>
                                     <div ng-switch-when="member">
                                         <div ng-if="field">
-                                            {{ field.Name }}<br/>
+                                            {{ field.Name }}<br />
                                             <small>{{field.Email}}</small>
                                         </div>
                                     </div>
@@ -191,8 +186,8 @@
                                         <span>{{ field | momentDateTimeZone : 'LLL' }}</span>
                                     </div>
                                     <div ng-switch-default>
-                                        <a class="umb-table-body__link" href="" ng-click="vm.viewEntryDetails(records.schema, row, $event)" ng-if="$index === 0">{{ field | truncate:20:true }}</a>
-                                        <span ng-if="$index > 0">{{ field | truncate:20:true }}</span>
+                                        <a class="umb-table-body__link" href="" ng-click="vm.viewEntryDetails(records.schema, row, $event)" ng-if="$index === 0"> {{(field || "&#x3C;Empty&#x3E;") | truncate:20:true }}</a>
+                                        <span ng-if="$index > 0">{{(field || "&#x3C;Empty&#x3E;") | truncate:20:true }}</span>
                                     </div>
                                 </div>
 
@@ -202,13 +197,12 @@
                 </div>
 
                 <!-- Pagination -->
-                <umb-pagination
-					ng-if="vm.pagination.totalPages > 1 && !vm.loading"
-                    page-number="vm.pagination.pageNumber"
-                    total-pages="vm.pagination.totalPages"
-                    on-next="vm.nextPage"
-                    on-prev="vm.prevPage"
-                    on-go-to-page="vm.goToPageNumber">
+                <umb-pagination ng-if="vm.pagination.totalPages > 1 && !vm.loading"
+                                page-number="vm.pagination.pageNumber"
+                                total-pages="vm.pagination.totalPages"
+                                on-next="vm.nextPage"
+                                on-prev="vm.prevPage"
+                                on-go-to-page="vm.goToPageNumber">
                 </umb-pagination>
 
                 <umb-load-indicator ng-if="loading"></umb-load-indicator>
@@ -230,21 +224,19 @@
 
                     <umb-editor-sub-header-content-right>
                         <umb-editor-sub-header-section>
-                            <umb-button
-                                type="button"
-                                icon="icon-delete"
-                                button-style="link"
-                                label="Close"
-                                shortcut="esc"
-                                action="vm.closeEntryDetails()">
+                            <umb-button type="button"
+                                        icon="icon-delete"
+                                        button-style="link"
+                                        label="Close"
+                                        shortcut="esc"
+                                        action="vm.closeEntryDetails()">
                             </umb-button>
                         </umb-editor-sub-header-section>
                     </umb-editor-sub-header-content-right>
 
                 </umb-editor-sub-header>
 
-                <umb-forms-entry-detail
-                    entry="vm.selectedEntry">
+                <umb-forms-entry-detail entry="vm.selectedEntry" sensitive-data-access="vm.canEditSensitiveData">
                 </umb-forms-entry-detail>
 
             </umb-editor-container>
@@ -253,28 +245,25 @@
 
                 <umb-editor-footer-content-left>
 
-                    <umb-keyboard-shortcuts-overview
-                        model="vm.keyboardShortcutsOverview">
+                    <umb-keyboard-shortcuts-overview model="vm.keyboardShortcutsOverview">
                     </umb-keyboard-shortcuts-overview>
 
                 </umb-editor-footer-content-left>
 
                 <umb-editor-footer-content-right>
-                    <umb-button
-                        ng-if="vm.selectedEntry.entryCount > 1"
-                        type="button"
-                        label="Previous entry"
-                        shortcut="left"
-                        action="vm.prevEntryDetails()">
-                   </umb-button>
+                    <umb-button ng-if="vm.selectedEntry.entryCount > 1"
+                                type="button"
+                                label="Previous entry"
+                                shortcut="left"
+                                action="vm.prevEntryDetails()">
+                    </umb-button>
 
-                    <umb-button
-                        ng-if="vm.selectedEntry.entryCount < records.totalNumberOfResults"
-                        type="button"
-                        label="Next entry"
-                        shortcut="right"
-                        action="vm.nextEntryDetails()">
-                   </umb-button>
+                    <umb-button ng-if="vm.selectedEntry.entryCount < records.totalNumberOfResults"
+                                type="button"
+                                label="Next entry"
+                                shortcut="right"
+                                action="vm.nextEntryDetails()">
+                    </umb-button>
                 </umb-editor-footer-content-right>
 
             </umb-editor-footer>

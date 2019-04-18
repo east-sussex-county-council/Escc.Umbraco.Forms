@@ -4,7 +4,7 @@
 
 Unfortunately Umbraco Forms grants access to all forms for new users, and to all users for new forms. The default permission set should be 'deny' in both cases, and `UmbracoFormsSecurityApiController` exists to create a 'deny' record wherever one is missing. Run `Escc.Umbraco.Forms.Security.DenyAccessToFormsByDefault.exe` frequently as a scheduled task. It will pick up and fix new users and new forms as they are created.
 
-This issue is logged with Umbraco as [CON-1022](http://issues.umbraco.org/issue/CON-1022).
+This issue is logged with Umbraco as [Issue #12](https://github.com/umbraco/Umbraco.Forms.Issues/issues/12).
 
 When you create a new form you will need to grant access to the form to anyone who needs to view the data for processing (assuming the default workflow is used which stores the data in Umbraco). To grant access: 
 
@@ -43,4 +43,4 @@ The only way to access the secured file for anyone without those account details
 	</FileSystemProviders>
 
 
-This issue is logged with Umbraco as [CON-1454](http://issues.umbraco.org/issue/CON-1454).
+This issue is logged with Umbraco as [Issue #11](https://github.com/umbraco/Umbraco.Forms.Issues/issues/11).

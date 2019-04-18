@@ -267,7 +267,6 @@
     <Content Include="App_Plugins\EsccUmbracoFormsFieldTypes\rich-text-setting-editor.controller.js" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DatePicker.cs" />
     <Compile Include="Email.cs" />
     <Compile Include="EthnicGroup.cs" />
     <Compile Include="FormattedTextField.cs" />
@@ -291,7 +290,6 @@
     <Content Include="Views\Partials\Forms\Themes\default\FieldTypes\FieldType.Gender.cshtml" />
     <Content Include="Views\Partials\Forms\Themes\default\FieldTypes\FieldType.PhoneNumber.cshtml" />
     <Content Include="Views\Partials\Forms\Themes\default\FieldTypes\FieldType.Url.cshtml" />
-    <Content Include="Views\Partials\Forms\Themes\default\FieldTypes\FieldType.DatePicker.cshtml" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

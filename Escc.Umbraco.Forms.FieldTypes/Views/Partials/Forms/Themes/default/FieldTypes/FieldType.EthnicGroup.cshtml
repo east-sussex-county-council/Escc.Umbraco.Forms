@@ -76,13 +76,13 @@
 </select>
 
 <div class="formPart umbraco-forms-field ethnicgroup alternating condition-not-matched">
-    <label for="@Model.Id-other" class="umbraco-forms-label">
+    <label for="12345678-@Model.Id.Substring(9)" class="umbraco-forms-label">
         Please describe your ethnic origin
     </label>
     <div class="umbraco-forms-field-wrapper">
         <input type="text"
                name="@Model.Name"
-               id="@Model.Id-other"
+               id="12345678-@Model.Id.Substring(9)"
                class="@className text"
                value="@otherValue"
                maxlength="50" />
