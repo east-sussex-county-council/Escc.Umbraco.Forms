@@ -1,12 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2018
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.352
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Escc.Umbraco.Forms.BackOffice", "Escc.Umbraco.Forms.BackOffice\Escc.Umbraco.Forms.BackOffice.csproj", "{DEEE733C-8BD3-4CB3-AC82-EA7E38E5EC1E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2951A16E-98C1-4D9E-8335-A5D47F993929}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		app-install-ApplyRetentionSchedule.cmd = app-install-ApplyRetentionSchedule.cmd
+		app-install-ApplyRetentionSchedule.ps1 = app-install-ApplyRetentionSchedule.ps1
+		app-install-DenyAccessToFormsByDefault.cmd = app-install-DenyAccessToFormsByDefault.cmd
+		app-install-DenyAccessToFormsByDefault.ps1 = app-install-DenyAccessToFormsByDefault.ps1
 		LICENSE.md = LICENSE.md
 		README.md = README.md
 	EndProjectSection
